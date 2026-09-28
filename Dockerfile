@@ -13,6 +13,8 @@ echo 'mkdir -p /var/lock/apache2' >> /webapp/run_http.sh && \
 echo '/usr/sbin/apache2 -D FOREGROUND' >> /webapp/run_http.sh && \
 chmod 744 /webapp/run_http.sh
 
+EXPOSE 80
+
 CMD /webapp/run_http.sh
 
 
