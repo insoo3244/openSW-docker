@@ -5,8 +5,11 @@ using namespace std;
 
 class Node{
 public:
-    Node(int e, Node* p, int h) 
+    Node(int e, Node* p, int h) // 기본 생성자
     : elem(e), parent(p), height(h), left(nullptr), right(nullptr) {}
+
+    Node() // 더미 노드를 위한 생성자
+    : elem(0), parent(nullptr), height(0), left(nullptr), right(nullptr) {}
 private:
     int elem;
     Node* parent;
@@ -140,6 +143,12 @@ public:
         n--;
         return true;
     }
+
+    // 회전 함수
+    void rotation(){
+
+    }
+
 
     // 출력과 중위순회 함수
     void print(){
