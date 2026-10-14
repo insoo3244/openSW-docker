@@ -8,7 +8,7 @@ public:
     Node(int e, Node* p, int h) // 기본 생성자
     : elem(e), parent(p), height(h), left(nullptr), right(nullptr) {}
 
-    Node() // 더미 노드를 위한 생성자
+    Node() // 더미 노드를 위한 생성자 + 외부노드 대용으로 일단 만들어둠
     : elem(0), parent(nullptr), height(0), left(nullptr), right(nullptr) {}
 private:
     int elem;
@@ -146,7 +146,12 @@ public:
 
     // 회전 함수
     void rotation(){
-
+        Node
+    }
+    // 높이 반환 함수
+    int getHeight(Node* node){
+        if(!node) { return 0; }
+        return node->height;
     }
 
 
