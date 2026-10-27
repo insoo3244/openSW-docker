@@ -1,197 +1,387 @@
+#include <stdio.h>
 #include <iostream>
 #include <string>
 
 using namespace std;
-
-class Node{
-public:
-    Node(int e, Node* p, int h) // 기본 생성자
-    : elem(e), parent(p), height(h), left(nullptr), right(nullptr) {}
-
-    Node() // 더미 노드를 위한 생성자
-    : elem(0), parent(nullptr), height(0), left(nullptr), right(nullptr) {}
+class node {
 private:
-    int elem;
-    Node* parent;
-    int height;
+   friend class BSTMap;
 
-    Node* left;
-    Node* right;
+   // key-value? key x와 노드 x가 서로 일치하게 설계하는 것 아님?
+   int key;
+   int value;
+   int height;
 
-    friend class AVL;
+   node* parent;
+   node* left;
+   node* right;
+public:
+   node(int key, int value, int height, node* parent)
+      :key(key), value(value), height(height), parent(parent), left(nullptr), right(nullptr){ }
 };
 
-class AVL{
-public:
-    // 생성자 및 소멸자
-    AVL() : n(0), rnode(nullptr){}
-    ~AVL() { if(!empty()) clear(rnode); }
-
-    // 크기 반환 및 비어있는가 여부
-    int size() { return n; }
-    bool empty() { return size() == 0; }
-
-    // 완전 비우기 함수
-    void clear(Node* node){
-        if(node->left) { clear(node->left); }
-        if(node->right) { clear(node->right); }
-
-        delete node;
-    }
-    
-    // 찾기 보조함수 및 찾기 함수
-    Node* find_elem(int k){
-        Node* v = rnode;
-
-        while(v){
-            if(k == v->elem) { return v; }
-
-            if(k < v->elem) { v = v->left; }
-            else { v = v->right; }
-        }
-
-        return nullptr;
-    }
-    int find_e(int k){
-        Node* node = find_elem(k);
-        if(!node) return 0;
-
-        return node->elem;
-    }
-
-    // 삽입 (중복 원소 허용X)
-    bool insert(int k){
-        if(empty()) { // 아무 원소도 없을 때
-            rnode = new Node(k, nullptr, 1);
-            n++;
-            return true;
-        }
-
-        // 루트노드부터 삽입할 위치 탐색
-        Node* node = rnode;
-        Node* pn = nullptr;
-        while(node){
-            if(k == node->elem) { return false; } // 중복 원소 허용 X
-
-            pn = node;
-            if(k < node->elem) { node = node->left; }
-            else { node = node->right; }
-        }
-
-        // 새 노드 생성 및 삽입
-        Node* v = new Node(k, pn, 1);
-        if(k < pn->elem) { pn->left = v; }
-        else { pn->right = v; }
-
-        n++;
-        return true;
-    }
-
-    // 후행자 찾기 함수
-    Node* getSuccessor(Node* v){
-        if(v->right){
-            Node* temp = v->right;
-            while(temp->left) { temp = temp->left; }
-
-            return temp;
-        }
-        Node* cur = v;
-        Node* pn = v->parent;
-        while(pn && cur == pn->right){
-            cur = pn;
-            pn = cur->parent;
-        }
-        return pn;
-    }
-    // 삭제
-    bool erase(int k){
-        return erase(find_elem(k));
-    }
-    // 삭제보조함수
-    bool erase(Node* node){
-        if(!node) { return false; }
-
-        // 왼오른 자식이 다 있을 경우 : node에 후행자 정보 복사
-        if(node->left && node->right){
-            Node* v = getSuccessor(node);
-
-            node->elem = v->elem;
-            node->height = v->height;
-            node = v;
-        }
-
-        // 자식 노드 cn, 왼쪽부터 고르기
-        Node* cn = nullptr;
-        if(node->left) { cn = node->left; }
-        else { cn = node->right; }
-
-        // 내가 제거할 노드가 루트노드라면 : 자식을 루트노드로 포인터 갱신
-        if(node == rnode){
-            rnode = cn;
-            if(cn) { cn->parent = nullptr; }
-        } 
-        // 아닌 경우 : 자식과 부모의 대소비교에 의해 왼오른자식 결정
-        else{
-            Node* pn = node->parent;
-            if(cn) { cn->parent = pn; }
-
-            if(node == pn->left) { pn->left = cn; }
-            else { pn->right = cn; }
-        }
-
-        delete node;
-        n--;
-        return true;
-    }
-
-    // 회전 함수
-    void rotation(){
-
-    }
-
-
-    // 출력과 중위순회 함수
-    void print(){
-        if(empty()) { return; }
-        in(rnode);
-        cout << '\n';
-    }
-    void in(Node* node){
-        if(node == nullptr) { return; }
-        if(node->left) { in(node->left); }
-
-        cout << node->elem << ' ';
-
-        if(node->right) { in(node->right); }
-    }
-
+class BSTMap {
 private:
-    int n;
-    Node* rnode;
-    
+   int n; 
+   node* root_node;
+
+   void clear(node* Node);
+   void update_height(node* Node); // 높이 갱신
+   node* find_node(int key);
+
+   void erase(node* Node);
+   node* get_successor(node* Node);
+
+   int height(node* Node);
+   int subtree_size(node* Node);
+public:
+   BSTMap();
+   ~BSTMap();
+
+   void height(int key);
+   void subtree_size(int key);
+
+   void insert(int key, int value);
+   void erase(int key);
+   int check(int key); // = find()
+   int num();	
+   int size();                        // O(1)
+	bool empty();                      // O(1)
+
+   void print();                      // 중위 순회 출력 O(n)
+   void inorder(node* Node);
+
+   // 아래 max, min 함수는 출력을 겸함
+   void find_Max(int x); // 최대 key 찾기
+   void find_Min(int x); // 최소 key 찾기
 };
 
-int main(){
-    int n;
-    string cmd;
-    cin >> n;
+BSTMap::BSTMap()
+   :n(0), root_node(nullptr){ }
+BSTMap::~BSTMap() {
+   if (!empty()) {
+      clear(root_node);
+      n = 0; // 일단?
+   }
+}
 
-    AVL avl;
-    while(n--){
-        cin >> cmd;
+int BSTMap::height(node* Node) {
+   int max = 0;
+   if (Node == nullptr) {
+      return 0;
+   }
 
-        if(cmd == "insert"){
-            int t; cin >> t;
+   // 왼/오 서브트리 높이 비교
+   int lefth = height(Node->left);
+   int righth = height(Node->right);
+   if (max < lefth) {
+      max = lefth;
+   }
+   if (lefth < righth) {
+      max = righth;
+   }
 
-            avl.insert(t);
+   return max + 1;
+   // return (lefth < righth ? righth + 1 : lefth + 1);
+}
+
+int BSTMap::subtree_size(node* Node) {
+   if (Node == nullptr) { return 0; }
+
+   return subtree_size(Node->left) + subtree_size(Node->right) + 1; // 자식 서브트리 + 본인 노드 = 서브트리 크기
+}
+
+void BSTMap::height(int key) {
+   node* target = find_node(key);
+   if (target == nullptr) {
+      cout << "invalid" << endl;
+      return;
+   }// 검증용
+
+   cout << target->height << height(target) << endl; // ?
+   // cout << target->height << " " << height(target) << endl; 이거 물어보기 : 타겟의 높이와 타겟의 높이 출력?
+}
+
+void BSTMap::subtree_size(int key) {
+   node* target = find_node(key);
+   if (target == nullptr) {
+      cout << "invalid" << endl;
+      return;
+   }
+
+   cout << subtree_size(target) << endl;
+}
+
+void BSTMap::clear(node* Node) {
+   if (Node == nullptr) { return; }
+   if (Node->left != nullptr) { clear(Node->left); }
+   if (Node->right != nullptr) { clear(Node->right); }
+   delete Node;
+}
+
+node* BSTMap::find_node(int key) {
+   node* trv = root_node;
+
+    while (trv != nullptr) {
+        if (key == trv->key) {
+            return trv;
         }
-        if(cmd == "erase"){
-            int t; cin >> t;
-            
-            avl.erase(t);
+
+        if (key < trv->key) {
+            trv = trv->left;
         }
-        if(cmd == "print"){
-            avl.print();
+        else {
+            trv = trv->right;
         }
-    }
+   }
+
+   return nullptr;
+}
+
+void BSTMap::erase(node* Node) {
+   if (Node == nullptr) { cout << "invalid" << endl;return; }
+   n--;
+
+   // 후행자 정보 복사
+   if (Node->left != nullptr && Node->right != nullptr) {
+      node* successor = get_successor(Node);
+      Node->key = successor->key;
+      Node->value = successor->value;
+      Node = successor;
+   }
+
+   // 유효한 자식으로 초기화
+   node* child; // node* child = (Node->left ? Node->left : Node->right);
+   if (Node->left != nullptr) {
+      child = Node->left;
+   }
+   else {
+      child = Node->right;
+   }
+
+   // 삭제할 노드가 루트노드라면 ?
+   if (Node == root_node) {
+      root_node = child;
+      if (child != nullptr) {
+         child->parent = nullptr;
+      }
+   }
+   // 일반 노드라면 ?
+   else {
+      node* par = Node->parent;
+      if (child != nullptr) {
+         child->parent = par;
+      }
+      if (Node == par->left) {
+         par->left = child;   
+      }
+      else {
+         par->right = child;
+      }
+
+   }
+   delete Node;
+}
+node* BSTMap::get_successor(node* Node) {
+   if (Node->right) {
+      node* trv = Node->right;
+      while (trv->left) {
+         trv = trv->left;
+      }
+      return trv;
+   }
+   else {
+      node* trv = Node;
+      node* Par = Node->parent;
+      while (Par && trv == Par->right) {
+         Par = Par->parent;
+         trv = trv->parent;
+      }
+      return Par;
+   }
+   /*코드블락이지만 로직 일관성을 위해 작성 <- ?? 이거도 물어보기 */
+}
+
+void BSTMap::insert(int key, int value) {
+   if (empty()) {
+      root_node = new node(key, value, 1, nullptr);
+      n++;
+      return;
+   }
+
+   // 삽입할 자리 탐색
+   node* trv = root_node;
+   node* par = nullptr;
+   while (trv != nullptr) {
+      if (trv->key == key) {
+         return;
+      }
+      par = trv;
+      if (key < trv->key) {
+         trv = trv->left;
+      
+      }
+      else {
+         trv = trv->right;
+         
+      }
+   }
+
+   node* new_node = new node(key, value,1, par);
+   if (new_node->key < par->key) {
+      par->left = new_node;
+   }
+   else {
+      par->right = new_node;
+   }
+
+   // 삽입 노드의 부모 노드 높이 갱신
+   update_height(par);
+   ++n;
+}
+void BSTMap::update_height(node* Node) {
+   while (Node != nullptr) {
+      int lefth = 0;
+      int righth = 0;
+      // int lefth = (Node->left ? : Node->left->height : 0);
+      // int right = (Node->right ? : Node->right->height : 0);
+
+      if (Node->left != nullptr) {
+         lefth = Node->left->height;
+      }/*nullptr역참조 방지로직*/
+
+      if (Node->right != nullptr) {
+         righth = Node->right->height;
+      }/*여기도 마찬가지로*/
+
+      if (lefth > righth) {
+         Node->height = lefth + 1;
+      }
+      else {
+         Node->height = righth + 1;
+      }
+
+      // 높이 차 판단 로직 (-1, 0, 1이 아닐 경우)
+      int sub = lefth - righth;
+      if (sub < 0) { sub *= -1; /*절댓값 작업*/ }
+      if (sub >= 2) {
+         /*회전 함수 바로 호출후 넘어가기*/
+      }
+      Node = Node->parent; // ? 
+   }
+}
+
+void BSTMap::erase(int key) {
+   node* target = find_node(key);
+   erase(target);
+}
+
+int BSTMap::check(int key) { // find() : value 반환 중 + 10/26 다시 key로 바꿔봤어요
+   node* target = find_node(key);
+   if (target == nullptr) {
+      return 0;
+   }
+   return target->key;
+}
+int BSTMap::num() { // size()
+   return n;
+}
+int BSTMap::size() {
+	return n;                              // n을 계속 관리하므로 O(1)
+}
+bool BSTMap::empty() {
+	return n == 0;                         // O(1)
+}
+
+// MAXIMUM x : key와 깊이를 같이 출력
+void BSTMap::find_Max(int x){
+   node* Node = find_node(x);
+   if(!Node) { return; }
+
+   int depth = 0;
+   while(Node->right){
+      Node = Node->right;
+      depth++;
+   }
+   
+   cout << Node->key << ' ' << depth << '\n';
+}
+// MINIMUM x : key와 깊이를 같이 출력
+void BSTMap::find_Min(int x){
+   node* Node = find_node(x);
+   if(!Node) { return; }
+
+   int depth = 0;
+   while(Node->left){
+      Node = Node->left;
+      depth++;
+   }
+   
+   cout << Node->key << ' ' << depth << '\n';
+}
+
+void BSTMap::inorder(node* Node) {
+	if (Node == nullptr) { return; }
+	inorder(Node->left);                   // 1. 왼쪽 (작은 값)
+	cout << Node->key << " ";              // 2. 자기 자신
+	inorder(Node->right);                  // 3. 오른쪽 (큰 값)
+}
+void BSTMap::print() {
+	inorder(root_node);
+	cout << endl;
+}
+
+int main() {
+   int N;/*테스트케이스 개수*/
+   int a;/*명령어 개수*/
+   string name;
+   cin >> N;
+   while (N--) {
+      cin >> a;
+      BSTMap s;
+      while (a--) {
+         cin >> name;
+         if (name == "insert") {
+            int q, w;
+            cin >> q >> w;
+            s.insert(q, w);
+         }
+         else if (name == "erase") {
+            int q;
+            cin >> q;
+            s.erase(q);
+         }
+         else if (name == "check") {
+            int q;
+            cin >> q;
+            cout << s.check(q) << endl;
+         }
+         else if (name == "num") {
+            cout << s.num() << endl;
+         }
+         else if (name == "height") {
+            int q;
+            cin >> q;
+            s.height(q);
+         }
+         else if (name == "subtree_size") {
+            int q;
+            cin >> q;
+            s.subtree_size(q);
+         }
+         else if(name == "print"){
+            s.print();
+         }
+         else if(name == "Maximum"){
+            int q;
+            cin >> q;
+            s.find_Max(q);
+         }
+         else if(name == "Minimum"){
+            int q;
+            cin >> q;
+            s.find_Min(q);
+         }
+      }
+   }
 }
