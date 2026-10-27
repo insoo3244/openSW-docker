@@ -37,7 +37,7 @@ public:
 	void insert(int key);
 	void erase(int key);
 	bool contains(int key);
-	int num();
+	int size();                        // O(1)
 	bool empty();                      // O(1)
 };
 
@@ -208,8 +208,8 @@ void BSTSet::erase(int key) {
 bool BSTSet::contains(int key) {
 	return find_node(key) != nullptr;
 }
-int BSTSet::num() {
-	return n;
+int BSTSet::size() {
+	return n;                              // n을 계속 관리하므로 O(1)
 }
 bool BSTSet::empty() {
 	return n == 0;                         // O(1)
@@ -245,8 +245,8 @@ int main() {
 			else if (name == "empty") {
 				cout << (s.empty() ? 1 : 0) << endl;
 			}
-			else if (name == "num") {
-				cout << s.num() << endl;
+			else if (name == "size") {
+				cout << s.size() << endl;
 			}
 			else if (name == "height") {
 				int q;
