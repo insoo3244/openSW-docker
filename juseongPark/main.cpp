@@ -27,6 +27,7 @@ private:
 	node* get_successor(node* Node);
 	int height(node* Node);
 	int subtree_size(node* Node);
+	void inorder(node* Node);          // 중위 순회 (내부용)
 public:
 	BSTSet();
 	~BSTSet();
@@ -39,6 +40,7 @@ public:
 	bool contains(int key);
 	int size();                        // O(1)
 	bool empty();                      // O(1)
+	void print();                      // 중위 순회 출력 O(n)
 };
 
 BSTSet::BSTSet()
@@ -214,6 +216,16 @@ int BSTSet::size() {
 bool BSTSet::empty() {
 	return n == 0;                         // O(1)
 }
+void BSTSet::inorder(node* Node) {
+	if (Node == nullptr) { return; }
+	inorder(Node->left);                   // 1. 왼쪽 (작은 값)
+	cout << Node->key << " ";              // 2. 자기 자신
+	inorder(Node->right);                  // 3. 오른쪽 (큰 값)
+}
+void BSTSet::print() {
+	inorder(root_node);
+	cout << endl;
+}
 
 int main() {
 	ios::sync_with_stdio(false);
@@ -247,6 +259,9 @@ int main() {
 			}
 			else if (name == "size") {
 				cout << s.size() << endl;
+			}
+			else if (name == "print") {
+				s.print();
 			}
 			else if (name == "height") {
 				int q;
