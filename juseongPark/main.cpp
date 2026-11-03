@@ -40,6 +40,7 @@ private:
    void rotate_right(node* z);                    // z를 오른쪽으로 돌린다 (z의 왼쪽 자식이 위로)
    void rotate_left(node* z);                     // z를 왼쪽으로 돌린다 (z의 오른쪽 자식이 위로)
    node* restructure(node* z, node* y, node* x);  // LL/LR/RR/RL 판단 후 회전
+   void rebalance(node* Node);
 public:
    BSTMap();
    ~BSTMap();
