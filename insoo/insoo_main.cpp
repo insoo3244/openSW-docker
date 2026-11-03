@@ -7,7 +7,6 @@ class node {
 private:
    friend class BSTMap;
 
-   // key-value? key x와 노드 x가 서로 일치하게 설계하는 것 아님?
    int key;
    int value;
    int height;
@@ -40,7 +39,7 @@ public:
 
    void height(int key);
    void subtree_size(int key);
-
+   int height_(node* Node);
    void insert(int key, int value);
    void erase(int key);
    int check(int key); // = find()
@@ -54,6 +53,9 @@ public:
    // 아래 max, min 함수는 출력을 겸함
    void find_Max(int x); // 최대 key 찾기
    void find_Min(int x); // 최소 key 찾기
+
+   // 회전 함수
+   void rotation(node* x, node* y, node* z);
 };
 
 BSTMap::BSTMap()
@@ -239,6 +241,9 @@ void BSTMap::insert(int key, int value) {
    update_height(par);
    ++n;
 }
+int BSTMap::height_(node* Node) {
+    return Node ? Node->height : 0;
+}
 void BSTMap::update_height(node* Node) {
    while (Node != nullptr) {
       int lefth = 0;
@@ -265,9 +270,38 @@ void BSTMap::update_height(node* Node) {
       int sub = lefth - righth;
       if (sub < 0) { sub *= -1; /*절댓값 작업*/ }
       if (sub >= 2) {
-         /*회전 함수 바로 호출후 넘어가기*/
+         /*회전 함수 바로 호출 후 넘어가기*/
+         node* z = Node;
+         node* y = nullptr;
+         node* x = nullptr;
+
+         if (height_(Node->left) > height_(Node->right)) {
+            y = Node->left;   
+         }
+         else {
+            y = Node->right;  
+         }
+
+         if (height_(y->left) > height_(y->right)) {
+            x = y->left;
+         }
+         else if (height_(y->left) < height_(y->right)) {
+            x = y->right;
+         }
+         else { /*x노드 높이가 동률일때 LL이나 RR케이스로 처리하도록*/
+            if (y == z->left) {
+               x = y->left;
+            }
+            else {
+               x = y->right;
+            }
+         }
+
+         // 회전 함수 호출
+         rotation(x, y, z);
+         
+         Node = Node->parent; // ? 
       }
-      Node = Node->parent; // ? 
    }
 }
 
@@ -329,6 +363,58 @@ void BSTMap::inorder(node* Node) {
 void BSTMap::print() {
 	inorder(root_node);
 	cout << endl;
+}
+
+// +) 11/3 : 회전 함수 
+void BSTMap::rotation(node* x, node* y, node* z){
+   /*
+      회전 로직
+      z : 회전을 진행해야하는 불균형 노드
+      y : z의 자식 중, 높이가 더 큰 자식 노드
+      x : y의 자식 중, 높이가 더 큰 자식 노드
+
+      1. 단일 회전
+         - y가 새로운 부분트리의 루트 노드가 됨.
+         - z의 자식 x, y가 전부 같은 방향인지 판단
+         - 전부 같은 방향이라면, x는 왼쪽, z는 오른쪽 자식으로 둔 y를 'z의 기존 부모'에 연결
+      2. 이중 회전
+         - x가 새로운 부분트리의 루트 노드가 됨
+         - 단일 회전이 아닌 경우 진행
+         - ex) LR 회전의 경우, 1. 좌회전 후, LL형태 완성. 2. 우회전을 하여 LR 회전 완수
+   
+      이 함수에서 수행해야 할 내용
+         1. x, y, z의 방향 판단 -> 회전 형태를 결정
+         2. LL LR RR RL 회전 수행
+      
+      전개 될 논리
+         1. 두 개의 boolean 변수를 선언. 1차 회전(fR), 2차 회전(sR) -> 방향 결정 (0 : L, 1 : R)
+         2. fR == sR -> 단일 회전 / fR != sR -> 이중 회전 
+         3. 조건문 내에서 회전방향 구분하여 회전 수행
+   */
+
+   // 1차, 2차 회전방향 결정
+   bool fR = (y == z->left ? false : true);
+   bool sR = (x == y->left ? false : true);
+
+   // z의 기존 부모
+   node* zPr = z->parent;
+
+   if(fR == sR){ // 단일 회전
+      if(fR){ // RR
+
+      }
+      else{ // LL
+
+      }
+   }
+   else{ // 이중 회전
+      if(fR){ // RL
+
+      }
+      else{ // LR
+
+      }
+   }
 }
 
 int main() {
