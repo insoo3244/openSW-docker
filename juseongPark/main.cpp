@@ -395,8 +395,9 @@ void BSTMap::update_height(node* Node) {
           x = y->right;
       }
       }
-      Node = Node->parent; // ? 
    }
+   
+   Node = Node->parent; // ? 
 }
 }
 // Node에서 시작해 루트까지 올라가면서 [높이 갱신 -> 균형 검사 -> 필요하면 회전] 반복
