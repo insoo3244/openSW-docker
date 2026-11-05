@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 using namespace std;
 class node {
 private:
    friend class BSTMap;
 
+   // key-value? key x와 노드 x가 서로 일치하게 설계하는 것 아님?
    int key;
    int value;
    int height;
@@ -33,6 +35,12 @@ private:
 
    int height(node* Node);
    int subtree_size(node* Node);
+
+   // 261031 by jsPark: 새로 추가한 AVL 회전 함수
+   void rotate_right(node* z);                    // z를 오른쪽으로 돌린다 (z의 왼쪽 자식이 위로)
+   void rotate_left(node* z);                     // z를 왼쪽으로 돌린다 (z의 오른쪽 자식이 위로)
+   node* restructure(node* z, node* y, node* x);  // LL/LR/RR/RL 판단 후 회전
+   void rebalance(node* Node);
 public:
    BSTMap();
    ~BSTMap();
@@ -53,9 +61,6 @@ public:
    // 아래 max, min 함수는 출력을 겸함
    void find_Max(int x); // 최대 key 찾기
    void find_Min(int x); // 최소 key 찾기
-
-   // 회전 함수
-   void rotation(node* x, node* y, node* z);
 };
 
 BSTMap::BSTMap()
@@ -161,6 +166,9 @@ void BSTMap::erase(node* Node) {
       child = Node->right;
    }
 
+   // 261031 by jsPark: AVL Rotation을 위해 삭제할 노드의 부모를 else문 밖에서 미리 저장
+   node* par = Node->parent;
+
    // 삭제할 노드가 루트노드라면 ?
    if (Node == root_node) {
       root_node = child;
@@ -170,7 +178,6 @@ void BSTMap::erase(node* Node) {
    }
    // 일반 노드라면 ?
    else {
-      node* par = Node->parent;
       if (child != nullptr) {
          child->parent = par;
       }
@@ -183,6 +190,9 @@ void BSTMap::erase(node* Node) {
 
    }
    delete Node;
+
+   // 261031 by jsPark: 노드 삭제 후 높이 갱신 + 필요하면 회전 (par가 nullptr이면 아무 일도 안 함)
+   rebalance(par);
 }
 node* BSTMap::get_successor(node* Node) {
    if (Node->right) {
@@ -237,12 +247,103 @@ void BSTMap::insert(int key, int value) {
       par->right = new_node;
    }
 
-   // 삽입 노드의 부모 노드 높이 갱신
-   update_height(par);
    ++n;
+   // 261031 by jsPark: 삽입 노드의 부모부터 위로 올라가며 높이 갱신 + 필요하면 회전
+   rebalance(par);
 }
 int BSTMap::height_(node* Node) {
     return Node ? Node->height : 0;
+}
+
+// 261031 by jsPark: AVL 오른쪽 회전 함수
+void BSTMap::rotate_right(node* z) {
+   node* y = z->left;      // 위로 올라갈 노드
+   node* B = y->right;     // 이사갈 서브트리 (nullptr일 수도 있음)
+   node* p = z->parent;    // z의 원래 부모
+ 
+   // 1. y를 z의 자리로 옮김
+   y->parent = p;
+   if (p == nullptr) {           // z가 루트였다면 이제 y가 루트
+      root_node = y;
+   }
+   else if (p->left == z) {      // z가 부모의 왼쪽 아이였다면
+      p->left = y;
+   }
+   else {                        // z가 부모의 오른쪽 아이였다면
+      p->right = y;
+   }
+ 
+   // 2. z를 y의 오른쪽 자식으로 내림
+   y->right = z;
+   z->parent = y;
+ 
+   // 3. B를 z의 왼쪽 자식으로 (nullptr이 아니면 무조건 z의 왼쪽 자식이 됨)
+   z->left = B;
+   if (B != nullptr) {
+      B->parent = z;
+   }
+ 
+   // 높이 다시 계산할 때 반드시 아래(z)에서 위(y)로 순서
+   z->height = max(height_(z->left), height_(z->right)) + 1;
+   y->height = max(height_(y->left), height_(y->right)) + 1;
+}
+// 261031 by jsPark: AVL 왼쪽 회전 함수
+void BSTMap::rotate_left(node* z) {
+   node* y = z->right;     // 위로 올라갈 노드
+   node* B = y->left;      // 이사갈 서브트리 (nullptr일 수도 있음)
+   node* p = z->parent;
+ 
+   // 1. y를 z의 자리로 옮김
+   y->parent = p;
+   if (p == nullptr) {
+      root_node = y;
+   }
+   else if (p->left == z) {
+      p->left = y;
+   }
+   else {
+      p->right = y;
+   }
+ 
+   // 2. z를 y의 왼쪽 자식으로
+   y->left = z;
+   z->parent = y;
+ 
+   // 3. B를 z의 오른쪽 자식으로 (nullptr이 아니면 무조건 z의 오른쪽 자식이 됨)
+   z->right = B;
+   if (B != nullptr) {
+      B->parent = z;
+   }
+ 
+   // 높이 다시 계산할 때 반드시 아래(z)에서 위(y)로 순서
+   z->height = max(height_(z->left), height_(z->right)) + 1;
+   y->height = max(height_(y->left), height_(y->right)) + 1;
+}
+// z : 균형이 깨진 노드,  y : z의 자식 중 서브트리 높이가 더 큰 자식,  x : y의 자식 중 서브트리 높이가 더 큰 자식
+// 회전이 끝난 뒤 그 자리의 , LL/RR은 y가 위로, LR/RL은 x 리턴
+node* BSTMap::restructure(node* z, node* y, node* x) {
+   if (y == z->left) {
+      if (x == y->left) {            // LL : 일자로 왼쪽으로 쏠림 -> 오른쪽 회전 1번
+         rotate_right(z);
+         return y;
+      }
+      else {                         // LR : "<" 모양 -> y를 왼쪽 회전, z를 오른쪽 회전
+         rotate_left(y);
+         rotate_right(z);
+         return x;
+      }
+   }
+   else {
+      if (x == y->right) {           // RR : 일자로 오른쪽으로 쏠림 -> 왼쪽 회전 1번
+         rotate_left(z);
+         return y;
+      }
+      else {                         // RL : ">" 모양 -> y를 오른쪽 회전, z를 왼쪽 회전
+         rotate_right(y);
+         rotate_left(z);
+         return x;
+      }
+   }
 }
 void BSTMap::update_height(node* Node) {
    while (Node != nullptr) {
@@ -265,21 +366,19 @@ void BSTMap::update_height(node* Node) {
       else {
          Node->height = righth + 1;
       }
-
       // 높이 차 판단 로직 (-1, 0, 1이 아닐 경우)
       int sub = lefth - righth;
       if (sub < 0) { sub *= -1; /*절댓값 작업*/ }
       if (sub >= 2) {
-         /*회전 함수 바로 호출 후 넘어가기*/
+         /*회전 함수 바로 호출후 넘어가기*/
          node* z = Node;
          node* y = nullptr;
          node* x = nullptr;
-
          if (height_(Node->left) > height_(Node->right)) {
-            y = Node->left;   
+            y = Node->left;
          }
          else {
-            y = Node->right;  
+            y = Node->right;
          }
 
          if (height_(y->left) > height_(y->right)) {
@@ -288,7 +387,7 @@ void BSTMap::update_height(node* Node) {
          else if (height_(y->left) < height_(y->right)) {
             x = y->right;
          }
-         else { /*x노드 높이가 동률일때 LL이나 RR케이스로 처리하도록*/
+         else { //x노드 높이가 동률일때 LL이나 RR케이스로 처리하도록
             if (y == z->left) {
                x = y->left;
             }
@@ -296,15 +395,55 @@ void BSTMap::update_height(node* Node) {
                x = y->right;
             }
          }
-
-         // 회전 함수 호출
-         rotation(x, y, z);
-         
-         Node = Node->parent; // ? 
       }
+         
+      Node = Node->parent;
    }
 }
-
+// Node에서 시작해 루트까지 올라가면서 [높이 갱신 -> 균형 검사 -> 필요하면 회전] 반복
+// insert,erase 가 끝난 뒤 둘 다 이 함수를 호출
+void BSTMap::rebalance(node* Node) {
+   while (Node != nullptr) {
+      update_height(Node);                 // 1. 내 높이부터 새로 계산
+ 
+      int lefth = height_(Node->left);
+      int righth = height_(Node->right);
+ 
+      // 2. 높이 차 판단 로직 (-1, 0, 1이 아닐 경우)
+      int sub = lefth - righth;
+      if (sub < 0) { sub *= -1; /*절댓값 작업*/ }
+      if (sub >= 2) {
+         node* z = Node;
+         node* y = nullptr;
+         node* x = nullptr;
+ 
+         if (height_(z->left) > height_(z->right)) {
+            y = z->left;
+         }
+         else {
+            y = z->right;
+         }
+ 
+         if (height_(y->left) > height_(y->right)) {
+            x = y->left;
+         }
+         else if (height_(y->left) < height_(y->right)) {
+            x = y->right;
+         }
+         else {/*x노드 높이가 동률일때 LL이나 RR케이스로 처리하도록*/
+            if (y == z->left) {
+               x = y->left;
+            }
+            else {
+               x = y->right;
+            }
+         }
+ 
+         Node = restructure(z, y, x);  // 회전 수행
+      }
+      Node = Node->parent;
+   }
+}
 void BSTMap::erase(int key) {
    node* target = find_node(key);
    erase(target);
@@ -363,58 +502,6 @@ void BSTMap::inorder(node* Node) {
 void BSTMap::print() {
 	inorder(root_node);
 	cout << endl;
-}
-
-// +) 11/3 : 회전 함수 
-void BSTMap::rotation(node* x, node* y, node* z){
-   /*
-      회전 로직
-      z : 회전을 진행해야하는 불균형 노드
-      y : z의 자식 중, 높이가 더 큰 자식 노드
-      x : y의 자식 중, 높이가 더 큰 자식 노드
-
-      1. 단일 회전
-         - y가 새로운 부분트리의 루트 노드가 됨.
-         - z의 자식 x, y가 전부 같은 방향인지 판단
-         - 전부 같은 방향이라면, x는 왼쪽, z는 오른쪽 자식으로 둔 y를 'z의 기존 부모'에 연결
-      2. 이중 회전
-         - x가 새로운 부분트리의 루트 노드가 됨
-         - 단일 회전이 아닌 경우 진행
-         - ex) LR 회전의 경우, 1. 좌회전 후, LL형태 완성. 2. 우회전을 하여 LR 회전 완수
-   
-      이 함수에서 수행해야 할 내용
-         1. x, y, z의 방향 판단 -> 회전 형태를 결정
-         2. LL LR RR RL 회전 수행
-      
-      전개 될 논리
-         1. 두 개의 boolean 변수를 선언. 1차 회전(fR), 2차 회전(sR) -> 방향 결정 (0 : L, 1 : R)
-         2. fR == sR -> 단일 회전 / fR != sR -> 이중 회전 
-         3. 조건문 내에서 회전방향 구분하여 회전 수행
-   */
-
-   // 1차, 2차 회전방향 결정
-   bool fR = (y == z->left ? false : true);
-   bool sR = (x == y->left ? false : true);
-
-   // z의 기존 부모
-   node* zPr = z->parent;
-
-   if(fR == sR){ // 단일 회전
-      if(fR){ // RR
-
-      }
-      else{ // LL
-
-      }
-   }
-   else{ // 이중 회전
-      if(fR){ // RL
-
-      }
-      else{ // LR
-
-      }
-   }
 }
 
 int main() {
